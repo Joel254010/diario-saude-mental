@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Base global === */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* === Estilos padrão === */
+@layer base {
+  body {
+    @apply antialiased text-gray-800;
+    font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(to bottom right, #f3e8ff, #e0f2fe, #ecfdf5);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+}
+
+/* === Tema Escuro === */
+html.dark body {
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0b1323);
+  color: #f1f5f9;
+}
+
+/* === Transições suaves === */
+html {
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* === Áreas de fundo === */
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-200 {
+  background-color: #1e293b !important;
+}
+.dark .bg-gray-700 {
+  background-color: #0f172a !important;
+}
+.dark .bg-gray-800 {
+  background-color: #0b1323 !important;
+}
+
+/* === Textos e bordas === */
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: #f8fafc !important;
+}
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-400 {
+  border-color: #475569 !important;
+}
+
+/* === Campos === */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+.dark input::placeholder,
+.dark ::placeholder {
+  color: #cbd5e1 !important;
+}
+
+/* === Botões === */
+.dark button {
+  color: #f1f5f9;
+}
+
+/* === Gradientes escuros === */
+.dark .bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0b1323) !important;
+}
+
+/* === Links === */
+.dark a {
+  color: #93c5fd;
+}
+.dark a:hover {
+  color: #60a5fa;
+}
+
+/* === Cabeçalhos, ícones, subtítulos === */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #e2e8f0 !important;
+}
+.dark svg {
+  color: #93c5fd;
+}
+
+/* === Chips de alimento === */
+.dark .chip,
+.dark .rounded-full,
+.dark .px-3,
+.dark .py-1 {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+  border: 1px solid #475569 !important;
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.2);
+}
+
+/* === Container principal do cardápio === */
+.dark .cardapio-container {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+/* === Textos de calorias === */
+.dark .caloria,
+.dark .alimento,
+.dark .descricao {
+  color: #f8fafc !important;
+}
+
+/* === Caixa de Total de Calorias === */
+.dark .bg-blue-50,
+.dark .bg-purple-100,
+.dark .bg-blue-100 {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: inset 0 0 8px rgba(148, 163, 184, 0.2);
+}
+
+/* Força o contraste mesmo se usar text-blue-400/70 */
+.dark .text-blue-400,
+.dark .text-blue-400\/70,
+.dark .text-blue-500 {
+  color: #93c5fd !important;
+  opacity: 1 !important;
+}
+
+/* === Botão "Salvar Cardápio de Hoje" === */
+.dark button.bg-gradient-to-r,
+.dark .bg-gradient-to-r.from-lavender-500.to-blue-400 {
+  background: linear-gradient(to right, #6366f1, #3b82f6) !important;
+  color: #f8fafc !important;
+  border: none !important;
+}
+.dark button.bg-gradient-to-r:hover {
+  background: linear-gradient(to right, #7c3aed, #2563eb) !important;
+  box-shadow: 0 0 12px rgba(147, 197, 253, 0.3);
+}
+
+/* === Transições globais === */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
