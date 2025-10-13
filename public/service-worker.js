@@ -1,20 +1,20 @@
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open("diario-saude-cache-v1").then((cache) => {
-      return cache.addAll(["/", "/index.html", "/manifest.json"]);
-    })
-  );
-  console.log("🧘‍♀️ Service Worker instalado!");
+  self.skipWaiting(); // força atualização imediata
+  console.log("🧠 Novo Service Worker instalado!");
 });
 
 self.addEventListener("activate", (event) => {
-  console.log("✨ Service Worker ativo!");
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => caches.delete(key)))
+    )
+  );
+  clients.claim(); // aplica sem precisar reiniciar o navegador
+  console.log("✅ Service Worker ativo e atualizado!");
 });
 
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
