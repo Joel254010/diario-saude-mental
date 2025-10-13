@@ -2,17 +2,54 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💧</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 🧠 Ícone principal -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+    <!-- 📱 Manifesto e PWA -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#b49edc" />
-    <meta name="description" content="Diário de Saúde Mental e Gratidão - Seu espaço de calma e bem-estar" />
+
+    <!-- 🧘 Descrição e SEO -->
+    <meta name="description" content="Diário de Saúde Mental — um espaço de calma, gratidão e bem-estar desenvolvido pela My GlobyX." />
+    <meta name="keywords" content="saúde mental, gratidão, diário, bem-estar, equilíbrio emocional, My GlobyX" />
+
+    <!-- 🍎 Configurações iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Diário Mental" />
-    <title>Diário de Saúde Mental e Gratidão</title>
+
+    <!-- 💜 Título -->
+    <title>Diário de Saúde Mental</title>
+
+    <!-- 🌀 Gradiente de fundo leve para fallback -->
+    <style>
+      body {
+        background: linear-gradient(to bottom right, #f3e8ff, #e0f2fe, #ecfdf5);
+        margin: 0;
+        font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+    </style>
   </head>
+
   <body>
     <div id="root"></div>
+
+    <!-- ⚙️ Registro do Service Worker -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/service-worker.js")
+            .then(() => console.log("✅ Service Worker registrado com sucesso!"))
+            .catch((err) => console.log("❌ Erro ao registrar o Service Worker:", err));
+        });
+      }
+    </script>
+
+    <!-- 🚀 React App -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
