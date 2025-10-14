@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import { ArrowLeft, Target, CheckCircle, Leaf } from "lucide-react";
 
 type Props = {
   onBack: () => void;
 };
 
-type LocalChallenge = {
+type ChallengeRecord = {
   id: string;
   user_id: string;
   challenge_type: keyof typeof challengeInfo;
@@ -14,6 +15,7 @@ type LocalChallenge = {
   current_day: number;
   completed: boolean;
   completed_at: string | null;
+  created_at?: string;
 };
 
 const challengeInfo = {
@@ -60,72 +62,78 @@ const challengeInfo = {
 
 export default function Challenges({ onBack }: Props) {
   const { user } = useAuth();
-  const [activeChallenges, setActiveChallenges] = useState<LocalChallenge[]>([]);
+  const [activeChallenges, setActiveChallenges] = useState<ChallengeRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 🔹 Carregar desafios do Supabase ao montar
   useEffect(() => {
-    loadChallenges();
-  }, []);
+    if (user) loadChallenges();
+  }, [user]);
 
-  function getKey() {
-    return `challenges_${user?.id}`;
-  }
-
-  function loadChallenges() {
+  async function loadChallenges() {
     if (!user) return;
-    const data: LocalChallenge[] = JSON.parse(localStorage.getItem(getKey()) || "[]");
-    setActiveChallenges(data);
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("desafios")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) console.error("Erro ao carregar desafios:", error);
+    else setActiveChallenges(data || []);
+    setLoading(false);
   }
 
-  function saveChallenges(data: LocalChallenge[]) {
-    localStorage.setItem(getKey(), JSON.stringify(data));
-    setActiveChallenges(data);
-  }
-
-  function startChallenge(type: LocalChallenge["challenge_type"]) {
+  async function startChallenge(type: ChallengeRecord["challenge_type"]) {
     if (!user) return;
     setLoading(true);
 
-    setTimeout(() => {
-      const challenges: LocalChallenge[] = JSON.parse(localStorage.getItem(getKey()) || "[]");
-      const newChallenge: LocalChallenge = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        challenge_type: type,
-        start_date: new Date().toISOString(),
-        current_day: 1,
-        completed: false,
-        completed_at: null,
-      };
-      challenges.push(newChallenge);
-      saveChallenges(challenges);
-      setLoading(false);
-    }, 300);
+    const newChallenge: Omit<ChallengeRecord, "id"> = {
+      user_id: user.id,
+      challenge_type: type,
+      start_date: new Date().toISOString(),
+      current_day: 1,
+      completed: false,
+      completed_at: null,
+    };
+
+    const { data, error } = await supabase
+      .from("desafios")
+      .insert([newChallenge])
+      .select();
+
+    if (error) console.error("Erro ao iniciar desafio:", error);
+    else setActiveChallenges((prev) => [...data, ...prev]);
+
+    setLoading(false);
   }
 
-  function incrementDay(
+  async function incrementDay(
     challengeId: string,
     currentDay: number,
     totalDays: number
   ) {
-    const challenges: LocalChallenge[] = JSON.parse(localStorage.getItem(getKey()) || "[]");
-    const index = challenges.findIndex((c) => c.id === challengeId);
-    if (index < 0) return;
-
     const newDay = currentDay + 1;
     const completed = newDay > totalDays;
 
-    challenges[index].current_day = Math.min(newDay, totalDays);
-    challenges[index].completed = completed;
-    challenges[index].completed_at = completed
-      ? new Date().toISOString()
-      : null;
+    const { data, error } = await supabase
+      .from("desafios")
+      .update({
+        current_day: Math.min(newDay, totalDays),
+        completed,
+        completed_at: completed ? new Date().toISOString() : null,
+      })
+      .eq("id", challengeId)
+      .select();
 
-    saveChallenges(challenges);
+    if (error) console.error("Erro ao atualizar desafio:", error);
+    else setActiveChallenges((prev) =>
+      prev.map((c) => (c.id === challengeId ? { ...c, ...data[0] } : c))
+    );
   }
 
   function getChallengeTask(
-    type: LocalChallenge["challenge_type"],
+    type: ChallengeRecord["challenge_type"],
     day: number
   ): string {
     const tasks = challengeInfo[type].tasks;
@@ -215,7 +223,7 @@ export default function Challenges({ onBack }: Props) {
                             info.days
                           )
                         }
-                        disabled={challenge.completed}
+                        disabled={challenge.completed || loading}
                         className={`w-full bg-gradient-to-r ${info.color} text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all`}
                       >
                         {challenge.completed
@@ -231,12 +239,10 @@ export default function Challenges({ onBack }: Props) {
 
         {/* Iniciar Novo Desafio */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            Começar Novo Desafio
-          </h2>
+          <h2 className="text-xl font-semibold mb-4">Começar Novo Desafio</h2>
           <div className="grid md:grid-cols-3 gap-4">
             {(Object.entries(challengeInfo) as [
-              LocalChallenge["challenge_type"],
+              ChallengeRecord["challenge_type"],
               (typeof challengeInfo)["21_days_gratitude"]
             ][]).map(([type, info]) => {
               const hasActive = activeChallenges.some(
@@ -276,9 +282,7 @@ export default function Challenges({ onBack }: Props) {
         {/* Desafios Concluídos */}
         {activeChallenges.filter((c) => c.completed).length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">
-              Desafios Concluídos
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">Desafios Concluídos</h2>
             <div className="space-y-4">
               {activeChallenges
                 .filter((c) => c.completed)

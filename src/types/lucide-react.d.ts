@@ -1,3 +1,4 @@
+// types/lucide-react.d.ts
 declare module "lucide-react" {
   import { FC, SVGProps } from "react";
 
@@ -7,7 +8,7 @@ declare module "lucide-react" {
     strokeWidth?: number | string;
   }
 
-  // Ícones principais usados no projeto
+  // 🌟 Ícones principais usados no projeto
   export const ArrowLeft: FC<IconProps>;
   export const Utensils: FC<IconProps>;
   export const Coffee: FC<IconProps>;
@@ -30,9 +31,14 @@ declare module "lucide-react" {
   export const SunMedium: FC<IconProps>;
   export const Flame: FC<IconProps>;
   export const Sparkles: FC<IconProps>;
+  export const Cloud: FC<IconProps>; // ✅ Usado no Progress.tsx
 
   // ✅ Ícones usados no SettingsPanel
   export const UserCircle: FC<IconProps>;
   export const BellRing: FC<IconProps>;
   export const Trash: FC<IconProps>;
+
+  // ✅ Adicionados agora para Challenges.tsx
+  export const CheckCircle: FC<IconProps>;
+  export const Leaf: FC<IconProps>;
 }

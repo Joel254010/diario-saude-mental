@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowLeft, UserCircle, BellRing, Moon, Trash, Save } from "lucide-react";
+import {
+  ArrowLeft,
+  UserCircle,
+  BellRing,
+  Moon,
+  Trash,
+  Save,
+} from "lucide-react";
 
 type Props = {
   onBack: () => void;
@@ -10,7 +17,9 @@ export default function SettingsPanel({ onBack }: Props) {
   const { user, profile, updateProfile, signOut } = useAuth();
 
   const [name, setName] = useState(profile?.name || "");
-  const [waterGoal, setWaterGoal] = useState<number>(profile?.water_goal || 8);
+  const [waterGoal, setWaterGoal] = useState<number>(
+    profile?.water_goal || 8
+  );
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(
     profile?.notifications_enabled ?? true
   );
@@ -21,7 +30,7 @@ export default function SettingsPanel({ onBack }: Props) {
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 🔹 Apenas carrega a preferência salva (sem forçar o tema)
+  // Carrega tema escuro salvo
   useEffect(() => {
     const savedDark = localStorage.getItem("darkModeEnabled") === "true";
     setDarkModeEnabled(savedDark);
@@ -29,7 +38,7 @@ export default function SettingsPanel({ onBack }: Props) {
     else document.documentElement.classList.remove("dark");
   }, []);
 
-  // 🔹 Atualiza o tema quando o usuário muda o modo
+  // Aplica tema ao mudar
   useEffect(() => {
     if (darkModeEnabled) {
       document.documentElement.classList.add("dark");
@@ -40,43 +49,44 @@ export default function SettingsPanel({ onBack }: Props) {
     }
   }, [darkModeEnabled]);
 
-  function handleSave() {
+  async function handleSave() {
+    if (!user) return;
     setLoading(true);
     setSaved(false);
 
-    setTimeout(() => {
-      const updatedProfile = {
-        ...profile,
+    try {
+      await updateProfile({
         name,
         water_goal: waterGoal,
         notifications_enabled: notificationsEnabled,
         dark_mode_enabled: darkModeEnabled,
-      };
-
-      localStorage.setItem(`profile_${user?.id}`, JSON.stringify(updatedProfile));
-      updateProfile(updatedProfile);
-
+      });
       setSaved(true);
+    } catch (err) {
+      console.error("Erro ao atualizar perfil:", err);
+    } finally {
       setLoading(false);
       setTimeout(() => setSaved(false), 3000);
-    }, 400);
+    }
   }
 
-  function handleDeleteAccount() {
+  async function handleDeleteAccount() {
     if (!user) return;
-    localStorage.removeItem(`profile_${user.id}`);
-    localStorage.removeItem(`daily_${user.id}`);
-    localStorage.removeItem(`daily_entries_${user.id}`);
-    localStorage.removeItem(`challenges_${user.id}`);
-    localStorage.removeItem(`letters_${user.id}`);
-    localStorage.removeItem(`entries_${user.id}`);
-    signOut();
+
+    try {
+      // ⚠️ Aqui apenas fazemos logout. Para excluir completamente:
+      // - Use a API Admin do Supabase (auth.admin.deleteUser)
+      // - Ou adicione uma flag deleted no banco e oculte o usuário
+
+      await signOut();
+    } catch (err) {
+      console.error("Erro ao excluir conta:", err);
+    }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
-        {/* Voltar */}
         <button
           onClick={onBack}
           className="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -85,12 +95,10 @@ export default function SettingsPanel({ onBack }: Props) {
           Voltar
         </button>
 
-        {/* Título */}
         <h1 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-lavender-600 to-blue-500 bg-clip-text text-transparent">
           Configurações
         </h1>
 
-        {/* Painel */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 space-y-6 transition-colors">
           {/* Nome */}
           <div>
@@ -106,7 +114,7 @@ export default function SettingsPanel({ onBack }: Props) {
             />
           </div>
 
-          {/* Meta de hidratação */}
+          {/* Meta de Hidratação */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Meta de Hidratação (copos/dia)
@@ -126,14 +134,20 @@ export default function SettingsPanel({ onBack }: Props) {
             <div className="flex items-center gap-3">
               <BellRing className="w-5 h-5 text-lavender-500" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-gray-100">Notificações</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Lembretes diários</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  Notificações
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Lembretes diários
+                </p>
               </div>
             </div>
             <button
               onClick={() => setNotificationsEnabled(!notificationsEnabled)}
               className={`relative w-14 h-8 rounded-full transition-colors ${
-                notificationsEnabled ? "bg-lavender-500" : "bg-gray-400 dark:bg-gray-600"
+                notificationsEnabled
+                  ? "bg-lavender-500"
+                  : "bg-gray-400 dark:bg-gray-600"
               }`}
             >
               <div
@@ -149,22 +163,28 @@ export default function SettingsPanel({ onBack }: Props) {
             <div className="flex items-center gap-3">
               <Moon className="w-5 h-5 text-lavender-500" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-gray-100">Modo Noturno</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Tema escuro</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  Modo Noturno
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Tema escuro
+                </p>
               </div>
             </div>
             <button
-  onClick={() => setDarkModeEnabled(!darkModeEnabled)}
-  className={`relative w-14 h-8 rounded-full transition-colors ${
-    darkModeEnabled ? "bg-gradient-to-r from-lavender-500 to-blue-400" : "bg-gray-400 dark:bg-gray-600"
-  }`}
->
-  <div
-    className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-      darkModeEnabled ? "translate-x-6" : "translate-x-0"
-    }`}
-  />
-</button>
+              onClick={() => setDarkModeEnabled(!darkModeEnabled)}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                darkModeEnabled
+                  ? "bg-gradient-to-r from-lavender-500 to-blue-400"
+                  : "bg-gray-400 dark:bg-gray-600"
+              }`}
+            >
+              <div
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                  darkModeEnabled ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </button>
           </div>
 
           {/* Sucesso */}

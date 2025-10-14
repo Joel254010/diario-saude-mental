@@ -1,3 +1,4 @@
+// src/components/Auth.tsx
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Sparkles } from "lucide-react";
@@ -18,12 +19,14 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        if (!name.trim()) throw new Error("Por favor, digite seu nome");
-        await signUp(email, password, name);
+        if (!name.trim()) throw new Error("Por favor, digite seu nome completo.");
+        await signUp(email.trim(), password.trim(), name.trim());
+        alert("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
       } else {
-        await signIn(email, password);
+        await signIn(email.trim(), password.trim());
       }
     } catch (err: any) {
+      console.error("Erro na autenticação:", err);
       setError(err.message || "Ocorreu um erro. Tente novamente.");
     } finally {
       setLoading(false);
@@ -32,7 +35,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-50 to-green-100 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* 🌸 Padrão visual sutil de fundo */}
+      {/* 🌸 Fundo decorativo sutil */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4zIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
 
       {/* 🌟 Card principal */}
@@ -59,7 +62,7 @@ export default function Auth() {
             {isSignUp && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome
+                  Nome completo
                 </label>
                 <input
                   type="text"
@@ -67,7 +70,7 @@ export default function Auth() {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all"
                   placeholder="Como você gostaria de ser chamado?"
-                  required={isSignUp}
+                  required
                 />
               </div>
             )}
@@ -111,7 +114,11 @@ export default function Auth() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-lavender-500 to-blue-400 text-white py-3.5 rounded-xl font-semibold text-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Carregando..." : isSignUp ? "Criar Conta" : "Entrar"}
+              {loading
+                ? "Carregando..."
+                : isSignUp
+                ? "Criar Conta"
+                : "Entrar"}
             </button>
           </form>
 
@@ -137,9 +144,7 @@ export default function Auth() {
             Mais um projeto desenvolvido por{" "}
             <span className="font-semibold text-lavender-700">My GlobyX</span>
           </p>
-          <p className="mt-1 text-gray-500">
-            Inspirando Transformações Reais 🌿
-          </p>
+          <p className="mt-1 text-gray-500">Inspirando Transformações Reais 🌿</p>
         </div>
       </div>
     </div>

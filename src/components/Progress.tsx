@@ -1,26 +1,26 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import { ArrowLeft, TrendingUp, Flame, Cloud } from "lucide-react";
 
 type Props = {
   onBack: () => void;
 };
 
-type LocalEntry = {
+type Registro = {
   id: string;
-  user_id: string;
-  entry_date: string;
-  mood_score: number;
-  gratitude_1: string | null;
-  gratitude_2: string | null;
-  gratitude_3: string | null;
-  reflection: string | null;
-  water_intake: number;
+  id_usuario: string;
+  data: string;
+  humor: string | number;
+  gratitude_1?: string | null;
+  gratitude_2?: string | null;
+  gratitude_3?: string | null;
+  descricao?: string | null;
 };
 
 export default function Progress({ onBack }: Props) {
   const { user } = useAuth();
-  const [entries, setEntries] = useState<LocalEntry[]>([]);
+  const [entries, setEntries] = useState<Registro[]>([]);
   const [weeklyMoods, setWeeklyMoods] = useState<number[]>([]);
   const [streak, setStreak] = useState(0);
   const [topWords, setTopWords] = useState<{ word: string; count: number }[]>(
@@ -28,52 +28,53 @@ export default function Progress({ onBack }: Props) {
   );
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user?.id) loadData();
+  }, [user]);
 
-  function loadData() {
-    if (!user) return;
+  /** 🔍 Busca registros do Supabase */
+  async function loadData() {
+    const { data, error } = await supabase
+      .from("registros")
+      .select("*")
+      .eq("id_usuario", user!.id)
+      .order("data", { ascending: false });
 
-    const key = `daily_entries_${user.id}`;
-    const storedEntries: LocalEntry[] = JSON.parse(
-      localStorage.getItem(key) || "[]"
-    );
-
-    const sorted = [...storedEntries].sort(
-      (a, b) =>
-        new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()
-    );
-
-    setEntries(sorted);
-    calculateWeeklyMoods(sorted);
-    calculateStreak(sorted);
-    calculateTopWords(sorted);
+    if (data) {
+      setEntries(data);
+      calculateWeeklyMoods(data);
+      calculateStreak(data);
+      calculateTopWords(data);
+    }
   }
 
-  function calculateWeeklyMoods(entries: LocalEntry[]) {
-    const last7 = entries.slice(0, 7).reverse();
-    setWeeklyMoods(last7.map((e) => e.mood_score));
+  function calculateWeeklyMoods(entries: Registro[]) {
+    const last7 = [...entries]
+      .slice(0, 7)
+      .reverse()
+      .map((e) => Number(e.humor || 3));
+    setWeeklyMoods(last7);
   }
 
-  function calculateStreak(entries: LocalEntry[]) {
+  function calculateStreak(entries: Registro[]) {
     let currentStreak = 0;
-    const sortedEntries = [...entries].sort(
+
+    const sorted = [...entries].sort(
       (a, b) =>
-        new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()
+        new Date(b.data).getTime() - new Date(a.data).getTime()
     );
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < sortedEntries.length; i++) {
-      const entryDate = new Date(sortedEntries[i].entry_date);
+    for (let i = 0; i < sorted.length; i++) {
+      const entryDate = new Date(sorted[i].data);
       entryDate.setHours(0, 0, 0, 0);
 
-      const expectedDate = new Date(today);
-      expectedDate.setDate(expectedDate.getDate() - i);
-      expectedDate.setHours(0, 0, 0, 0);
+      const expected = new Date(today);
+      expected.setDate(expected.getDate() - i);
+      expected.setHours(0, 0, 0, 0);
 
-      if (entryDate.getTime() === expectedDate.getTime()) {
+      if (entryDate.getTime() === expected.getTime()) {
         currentStreak++;
       } else {
         break;
@@ -83,7 +84,7 @@ export default function Progress({ onBack }: Props) {
     setStreak(currentStreak);
   }
 
-  function calculateTopWords(entries: LocalEntry[]) {
+  function calculateTopWords(entries: Registro[]) {
     const wordCount: Record<string, number> = {};
     const stopWords = new Set([
       "o",
@@ -110,7 +111,7 @@ export default function Progress({ onBack }: Props) {
         entry.gratitude_1,
         entry.gratitude_2,
         entry.gratitude_3,
-        entry.reflection,
+        entry.descricao,
       ].filter(Boolean);
 
       texts.forEach((text) => {
@@ -230,15 +231,7 @@ export default function Progress({ onBack }: Props) {
                       />
                     </div>
                     <span className="text-xs text-gray-600 font-medium">
-                      {[
-                        "Dom",
-                        "Seg",
-                        "Ter",
-                        "Qua",
-                        "Qui",
-                        "Sex",
-                        "Sáb",
-                      ][
+                      {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][
                         (new Date().getDay() -
                           weeklyMoods.length +
                           index +
@@ -259,17 +252,12 @@ export default function Progress({ onBack }: Props) {
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex items-center gap-3 mb-6">
               <Cloud className="w-6 h-6 text-lavender-500" />
-              <h2 className="text-xl font-semibold">
-                Palavras Mais Frequentes
-              </h2>
+              <h2 className="text-xl font-semibold">Palavras Mais Frequentes</h2>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {topWords.map((item) => {
-                const size = Math.max(
-                  14,
-                  Math.min(32, 14 + item.count * 2)
-                );
+                const size = Math.max(14, Math.min(32, 14 + item.count * 2));
                 return (
                   <span
                     key={item.word}
@@ -297,7 +285,7 @@ export default function Progress({ onBack }: Props) {
           </div>
         )}
 
-        {/* Caso sem dados */}
+        {/* Sem dados */}
         {entries.length === 0 && (
           <div className="bg-white rounded-2xl p-12 shadow-lg text-center">
             <p className="text-gray-600 text-lg">

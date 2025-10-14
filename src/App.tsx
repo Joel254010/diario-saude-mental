@@ -5,10 +5,7 @@ import Auth from "./components/Auth";
 import Dashboard from "./components/Dashboard";
 
 /**
- * Aplica o tema escuro/claro no <html> o mais cedo possível
- * - Lê do localStorage: "darkModeEnabled"
- * - Fallback: prefers-color-scheme: dark
- * - Escuta mudanças de storage para sincronizar entre abas
+ * Tema global escuro/claro sincronizado com localStorage e sistema
  */
 function useGlobalTheme() {
   useLayoutEffect(() => {
@@ -25,7 +22,6 @@ function useGlobalTheme() {
     else root.classList.remove("dark");
   }, []);
 
-  // Sincroniza tema entre múltiplas abas/janelas
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "darkModeEnabled") {
@@ -38,7 +34,6 @@ function useGlobalTheme() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Reage a mudanças da preferência do sistema (quando não houver override salvo)
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = (ev: MediaQueryListEvent) => {
@@ -50,7 +45,7 @@ function useGlobalTheme() {
       }
     };
     if (mq.addEventListener) mq.addEventListener("change", handler);
-    else mq.addListener(handler); // fallback para browsers antigos
+    else mq.addListener(handler);
     return () => {
       if (mq.removeEventListener) mq.removeEventListener("change", handler);
       else mq.removeListener(handler);

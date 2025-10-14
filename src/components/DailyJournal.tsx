@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowLeft, Smile, Meh, Frown, SmilePlus, Heart } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
+import { ArrowLeft, Heart } from "lucide-react";
 
 const moodEmojis = [
   { score: 1, emoji: "😢", label: "Muito triste" },
@@ -12,24 +13,6 @@ const moodEmojis = [
 
 type Props = {
   onBack: () => void;
-};
-
-type LocalEntry = {
-  id: string;
-  user_id: string;
-  entry_date: string;
-  mood_score: number;
-  gratitude_1: string | null;
-  gratitude_2: string | null;
-  gratitude_3: string | null;
-  reflection: string | null;
-  water_intake: number;
-  meal_plan: {
-    breakfast?: string;
-    lunch?: string;
-    snack?: string;
-    dinner?: string;
-  } | null;
 };
 
 export default function DailyJournal({ onBack }: Props) {
@@ -45,63 +28,58 @@ export default function DailyJournal({ onBack }: Props) {
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    loadTodayEntry();
-  }, []);
+    if (user?.id) {
+      loadTodayEntry();
+    }
+  }, [user]);
 
-  /** 🔹 Carrega entrada do dia do localStorage */
-  function loadTodayEntry() {
-    if (!user) return;
-    const key = `daily_entries_${user.id}`;
-    const entries: LocalEntry[] = JSON.parse(localStorage.getItem(key) || "[]");
-    const existing = entries.find((e) => e.entry_date === today);
+  /** 🔍 Busca a entrada do dia no Supabase */
+  async function loadTodayEntry() {
+    const { data, error } = await supabase
+      .from("registros")
+      .select("*")
+      .eq("id_usuario", user!.id)
+      .eq("data", today)
+      .single();
 
-    if (existing) {
-      setMoodScore(existing.mood_score);
-      setGratitude1(existing.gratitude_1 || "");
-      setGratitude2(existing.gratitude_2 || "");
-      setGratitude3(existing.gratitude_3 || "");
-      setReflection(existing.reflection || "");
+    if (data) {
+      setMoodScore(Number(data.humor) || 3);
+      setGratitude1(data.gratitude_1 || "");
+      setGratitude2(data.gratitude_2 || "");
+      setGratitude3(data.gratitude_3 || "");
+      setReflection(data.descricao || "");
     }
   }
 
-  /** 🔹 Salva a entrada do dia no localStorage */
-  function handleSave() {
+  /** 💾 Salva (upsert) entrada do dia */
+  async function handleSave() {
     if (!user) return;
     setLoading(true);
     setSaved(false);
 
-    const key = `daily_entries_${user.id}`;
-    const entries: LocalEntry[] = JSON.parse(localStorage.getItem(key) || "[]");
-    const existingIndex = entries.findIndex((e) => e.entry_date === today);
+    const { error } = await supabase.from("registros").upsert(
+      {
+        id_usuario: user.id,
+        data: today,
+        humor: moodScore.toString(),
+        gratitude_1: gratitude1 || null,
+        gratitude_2: gratitude2 || null,
+        gratitude_3: gratitude3 || null,
+        descricao: reflection || null,
+      },
+      { onConflict: "id_usuario,data" }
+    );
 
-    const newEntry: LocalEntry = {
-      id: existingIndex >= 0 ? entries[existingIndex].id : crypto.randomUUID(),
-      user_id: user.id,
-      entry_date: today,
-      mood_score: moodScore,
-      gratitude_1: gratitude1 || null,
-      gratitude_2: gratitude2 || null,
-      gratitude_3: gratitude3 || null,
-      reflection: reflection || null,
-      water_intake:
-        existingIndex >= 0 ? entries[existingIndex].water_intake : 0,
-      meal_plan:
-        existingIndex >= 0 ? entries[existingIndex].meal_plan || null : null,
-    };
-
-    if (existingIndex >= 0) {
-      entries[existingIndex] = newEntry;
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => {
+        setLoading(false);
+        onBack();
+      }, 1500);
     } else {
-      entries.push(newEntry);
-    }
-
-    localStorage.setItem(key, JSON.stringify(entries));
-    setSaved(true);
-
-    setTimeout(() => {
       setLoading(false);
-      onBack();
-    }, 1500);
+      alert("Erro ao salvar entrada. Tente novamente.");
+    }
   }
 
   return (
@@ -218,3 +196,4 @@ export default function DailyJournal({ onBack }: Props) {
     </div>
   );
 }
+

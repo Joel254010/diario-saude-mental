@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getDailyMessage } from "../data/messages";
-import { SunMedium, Droplet, BookOpen, TrendingUp, Target, Mail, Settings, LogOut, Heart, Utensils } from "lucide-react";
-
+import {
+  SunMedium,
+  Droplet,
+  BookOpen,
+  TrendingUp,
+  Target,
+  Mail,
+  Settings,
+  LogOut,
+  Heart,
+  Utensils,
+} from "lucide-react";
 
 import DailyJournal from "./DailyJournal";
 import Progress from "./Progress";
@@ -11,6 +21,7 @@ import FutureLetters from "./FutureLetters";
 import SettingsPanel from "./SettingsPanel";
 import CardapioSaudavel from "./CardapioSaudavel";
 import SOSButton from "./SOSButton";
+import { supabase } from "../lib/supabaseClient";
 
 type View =
   | "dashboard"
@@ -21,24 +32,22 @@ type View =
   | "settings"
   | "cardapio";
 
-type LocalEntry = {
+type Registro = {
   id: string;
-  user_id: string;
-  entry_date: string;
-  mood_score: number;
-  gratitude_1: string | null;
-  gratitude_2: string | null;
-  gratitude_3: string | null;
-  reflection: string | null;
-  water_intake: number;
+  id_usuario: string;
+  data: string;
+  humor: string | null;
+  descricao: string | null;
+  created_at: string;
+  water_intake?: number;
 };
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<View>("dashboard");
-  const [todayEntry, setTodayEntry] = useState<LocalEntry | null>(null);
+  const [todayEntry, setTodayEntry] = useState<Registro | null>(null);
+  const [recentEntries, setRecentEntries] = useState<Registro[]>([]);
   const [waterIntake, setWaterIntake] = useState(0);
-  const [recentEntries, setRecentEntries] = useState<LocalEntry[]>([]);
 
   const today = new Date().toISOString().split("T")[0];
   const dailyMessage = getDailyMessage();
@@ -47,83 +56,92 @@ export default function Dashboard() {
     hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   useEffect(() => {
-    if (user) {
-      loadTodayEntry();
-      loadRecentEntries();
+    if (user?.id) {
+      fetchTodayEntry();
+      fetchRecentEntries();
     }
   }, [user]);
 
-  function loadTodayEntry() {
-    if (!user) return;
-    const key = `daily_entries_${user.id}`;
-    const entries: LocalEntry[] = JSON.parse(localStorage.getItem(key) || "[]");
-    const existing = entries.find((e) => e.entry_date === today);
+  async function fetchTodayEntry() {
+    const { data, error } = await supabase
+      .from("registros")
+      .select("*")
+      .eq("id_usuario", user!.id)
+      .eq("data", today)
+      .single();
 
-    if (existing) {
-      setTodayEntry(existing);
-      setWaterIntake(existing.water_intake || 0);
-    }
-  }
-
-  function loadRecentEntries() {
-    if (!user) return;
-    const key = `daily_entries_${user.id}`;
-    const entries: LocalEntry[] = JSON.parse(localStorage.getItem(key) || "[]");
-    const sorted = [...entries].sort(
-      (a, b) =>
-        new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()
-    );
-    setRecentEntries(sorted.slice(0, 7));
-  }
-
-  function incrementWater() {
-    if (!user) return;
-    const key = `daily_entries_${user.id}`;
-    const entries: LocalEntry[] = JSON.parse(localStorage.getItem(key) || "[]");
-    const existingIndex = entries.findIndex((e) => e.entry_date === today);
-
-    const newIntake = waterIntake + 1;
-    setWaterIntake(newIntake);
-
-    if (existingIndex >= 0) {
-      entries[existingIndex].water_intake = newIntake;
+    if (data) {
+      setTodayEntry(data);
+      setWaterIntake(data.water_intake || 0);
     } else {
-      const newEntry: LocalEntry = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        entry_date: today,
-        mood_score: 3,
-        gratitude_1: null,
-        gratitude_2: null,
-        gratitude_3: null,
-        reflection: null,
-        water_intake: newIntake,
-      };
-      entries.push(newEntry);
-      setTodayEntry(newEntry);
+      setTodayEntry(null);
+      setWaterIntake(0);
     }
-
-    localStorage.setItem(key, JSON.stringify(entries));
-    loadRecentEntries();
   }
 
-  function getMoodColor(score: number): string {
-    if (score >= 4) return "bg-green-400";
-    if (score === 3) return "bg-yellow-400";
-    return "bg-blue-400";
+  async function fetchRecentEntries() {
+    const { data } = await supabase
+      .from("registros")
+      .select("*")
+      .eq("id_usuario", user!.id)
+      .order("data", { ascending: false })
+      .limit(7);
+
+    if (data) {
+      setRecentEntries(data);
+    }
+  }
+
+  async function incrementWater() {
+    const newAmount = waterIntake + 1;
+    setWaterIntake(newAmount);
+
+    if (todayEntry) {
+      const { error } = await supabase
+        .from("registros")
+        .update({ water_intake: newAmount })
+        .eq("id", todayEntry.id);
+
+      if (!error) fetchTodayEntry();
+    } else {
+      const { data, error } = await supabase
+        .from("registros")
+        .insert({
+          id_usuario: user!.id,
+          data: today,
+          humor: null,
+          descricao: null,
+          water_intake: newAmount,
+        })
+        .select()
+        .single();
+
+      if (data) {
+        setTodayEntry(data);
+        fetchRecentEntries();
+      }
+    }
   }
 
   const waterGoal = profile?.water_goal || 8;
   const waterProgress = Math.min((waterIntake / waterGoal) * 100, 100);
 
-  // ====== Rotas internas ======
+  function getMoodColor(score: number | null): string {
+    if (score === 5) return "bg-green-500";
+    if (score === 4) return "bg-lime-400";
+    if (score === 3) return "bg-yellow-400";
+    if (score === 2) return "bg-orange-400";
+    if (score === 1) return "bg-red-400";
+    return "bg-gray-300";
+  }
+
   if (currentView === "journal")
     return (
       <DailyJournal
         onBack={() => {
           setCurrentView("dashboard");
-          loadTodayEntry();
-          loadRecentEntries();
+          fetchTodayEntry();
+          fetchRecentEntries();
         }}
       />
     );
@@ -143,11 +161,9 @@ export default function Dashboard() {
   if (currentView === "cardapio")
     return <CardapioSaudavel onBack={() => setCurrentView("dashboard")} />;
 
-  // ====== Dashboard principal ======
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
       <div className="max-w-6xl mx-auto p-4 md:p-8">
-        {/* Cabeçalho */}
         <header className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
@@ -156,7 +172,6 @@ export default function Dashboard() {
             </h1>
             <p className="text-lg text-gray-700">Hoje é um novo começo.</p>
           </div>
-
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentView("settings")}
@@ -185,9 +200,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Bloco principal: hidratação + diário */}
+        {/* Hidratação + Diário */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Hidratação */}
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -216,7 +230,6 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Diário */}
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-lavender-500" />
@@ -247,7 +260,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Progresso / Desafios / Cardápio */}
+        {/* Cartões */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <DashboardCard
             title="Meu Progresso"
@@ -257,7 +270,6 @@ export default function Dashboard() {
             hover="group-hover:bg-green-200"
             onClick={() => setCurrentView("progress")}
           />
-
           <DashboardCard
             title="Desafios"
             subtitle="Participe de desafios de bem-estar"
@@ -266,7 +278,6 @@ export default function Dashboard() {
             hover="group-hover:bg-orange-200"
             onClick={() => setCurrentView("challenges")}
           />
-
           <DashboardCard
             title="Meu Cardápio Saudável"
             subtitle="Monte e registre suas refeições diárias"
@@ -277,7 +288,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Cartas */}
+        {/* Cartas para o Futuro */}
         <button
           onClick={() => setCurrentView("letters")}
           className="w-full bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group mb-8"
@@ -300,15 +311,15 @@ export default function Dashboard() {
                 <div key={entry.id} className="group relative">
                   <div
                     className={`w-12 h-12 rounded-xl ${getMoodColor(
-                      entry.mood_score
+                      Number(entry.humor)
                     )} flex items-center justify-center cursor-pointer hover:scale-110 transition-transform`}
                   >
                     <span className="text-white font-medium text-sm">
-                      {new Date(entry.entry_date).getDate()}
+                      {new Date(entry.data).getDate()}
                     </span>
                   </div>
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap">
-                    {new Date(entry.entry_date).toLocaleDateString("pt-BR")}
+                    {new Date(entry.data).toLocaleDateString("pt-BR")}
                   </div>
                 </div>
               ))}
@@ -330,7 +341,6 @@ export default function Dashboard() {
   );
 }
 
-/* ===== Componentes auxiliares ===== */
 function DashboardCard({
   title,
   subtitle,
@@ -341,7 +351,7 @@ function DashboardCard({
 }: {
   title: string;
   subtitle: string;
-  icon: React.ReactNode; // ✅ corrigido
+  icon: React.ReactNode;
   bg: string;
   hover: string;
   onClick: () => void;

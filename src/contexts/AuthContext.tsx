@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import {
   createContext,
   useContext,
@@ -5,129 +6,167 @@ import {
   useState,
   ReactNode,
 } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-type LocalUser = {
+type SupaUser = {
   id: string;
   email: string;
-  password: string;
-  name: string;
 };
 
-type LocalProfile = {
+type SupaProfile = {
   id: string;
   name: string;
   water_goal: number;
   notifications_enabled: boolean;
   dark_mode_enabled: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type AuthContextType = {
-  user: LocalUser | null;
-  profile: LocalProfile | null;
+  user: SupaUser | null;
+  profile: SupaProfile | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<LocalProfile>) => Promise<void>;
+  updateProfile: (updates: Partial<SupaProfile>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<LocalUser | null>(null);
-  const [profile, setProfile] = useState<LocalProfile | null>(null);
+  const [user, setUser] = useState<SupaUser | null>(null);
+  const [profile, setProfile] = useState<SupaProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Carrega sessão salva
+  // 🔹 Inicializa sessão do Supabase
   useEffect(() => {
-    const savedUser = localStorage.getItem("auth_user");
-    const savedProfile = localStorage.getItem("auth_profile");
-    if (savedUser) setUser(JSON.parse(savedUser));
-    if (savedProfile) setProfile(JSON.parse(savedProfile));
-    setLoading(false);
-  }, []);
-
-  // Função para criar novo usuário
-  async function signUp(email: string, password: string, name: string) {
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-    const existing = users.find((u: LocalUser) => u.email === email);
-    if (existing) throw new Error("E-mail já cadastrado.");
-
-    const newUser: LocalUser = {
-      id: crypto.randomUUID(),
-      email,
-      password,
-      name,
+    const fetchSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) console.error("Erro ao obter sessão:", error);
+      const sessionUser = data.session?.user;
+      if (sessionUser) {
+        setUser({ id: sessionUser.id, email: sessionUser.email! });
+        await loadProfile(sessionUser.id);
+      }
+      setLoading(false);
     };
 
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
+    fetchSession();
 
-    // Cria também o perfil
-    const newProfile: LocalProfile = {
-      id: newUser.id,
-      name,
-      water_goal: 8,
-      notifications_enabled: true,
-      dark_mode_enabled: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    localStorage.setItem(`profile_${newUser.id}`, JSON.stringify(newProfile));
-
-    // Define sessão
-    localStorage.setItem("auth_user", JSON.stringify(newUser));
-    localStorage.setItem("auth_profile", JSON.stringify(newProfile));
-    setUser(newUser);
-    setProfile(newProfile);
-  }
-
-  // Função para login
-  async function signIn(email: string, password: string) {
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const found = users.find(
-      (u: LocalUser) => u.email === email && u.password === password
+    // Escuta mudanças de login/logout
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          setUser({ id: session.user.id, email: session.user.email! });
+          await loadProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      }
     );
 
-    if (!found) throw new Error("Credenciais inválidas.");
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
-    const savedProfile = localStorage.getItem(`profile_${found.id}`);
-    const parsedProfile = savedProfile ? JSON.parse(savedProfile) : null;
+  // 🔹 Carrega o perfil do usuário da tabela `usuarios`
+  async function loadProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("id", userId)
+      .single();
 
-    localStorage.setItem("auth_user", JSON.stringify(found));
-    if (parsedProfile)
-      localStorage.setItem("auth_profile", JSON.stringify(parsedProfile));
+    if (error) {
+      console.warn("Perfil não encontrado:", error.message);
+      return;
+    }
 
-    setUser(found);
-    setProfile(parsedProfile);
+    setProfile(data);
   }
 
-  // Função de logout
+  // 🔹 Cadastro (Auth + tabela usuarios)
+  async function signUp(email: string, password: string, name: string) {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nome: name },
+      },
+    });
+
+    if (error) {
+      setLoading(false);
+      throw new Error(error.message);
+    }
+
+    if (data.user) {
+      setUser({ id: data.user.id, email: data.user.email! });
+
+      // Cria registro na tabela usuarios
+      const { error: insertError } = await supabase.from("usuarios").insert([
+        {
+          id: data.user.id,
+          nome: name,
+          email: data.user.email,
+        },
+      ]);
+
+      if (insertError) console.error("Erro ao inserir usuário:", insertError);
+      await loadProfile(data.user.id);
+    }
+
+    setLoading(false);
+  }
+
+  // 🔹 Login
+  async function signIn(email: string, password: string) {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setLoading(false);
+      throw new Error(error.message);
+    }
+
+    if (data.user) {
+      setUser({ id: data.user.id, email: data.user.email! });
+      await loadProfile(data.user.id);
+    }
+    setLoading(false);
+  }
+
+  // 🔹 Logout
   async function signOut() {
-    localStorage.removeItem("auth_user");
-    localStorage.removeItem("auth_profile");
+    await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   }
 
-  // Atualiza o perfil
-  async function updateProfile(updates: Partial<LocalProfile>) {
+  // 🔹 Atualizar perfil
+  async function updateProfile(updates: Partial<SupaProfile>) {
     if (!user) return;
 
-    const key = `profile_${user.id}`;
-    const current = JSON.parse(localStorage.getItem(key) || "{}");
-    const updated = {
-      ...current,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id)
+      .select()
+      .single();
 
-    localStorage.setItem(key, JSON.stringify(updated));
-    localStorage.setItem("auth_profile", JSON.stringify(updated));
-    setProfile(updated);
+    if (error) throw new Error(error.message);
+    setProfile(data);
   }
 
   return (
