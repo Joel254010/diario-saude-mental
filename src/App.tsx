@@ -1,6 +1,5 @@
 // src/App.tsx
 import React, { useLayoutEffect, useEffect } from "react";
-import { BrowserRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Auth from "./components/Auth";
 import Dashboard from "./components/Dashboard";
@@ -76,10 +75,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
