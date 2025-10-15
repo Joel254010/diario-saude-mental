@@ -31,14 +31,18 @@ declare module "lucide-react" {
   export const SunMedium: FC<IconProps>;
   export const Flame: FC<IconProps>;
   export const Sparkles: FC<IconProps>;
-  export const Cloud: FC<IconProps>; // ✅ Usado no Progress.tsx
+  export const Cloud: FC<IconProps>;
 
   // ✅ Ícones usados no SettingsPanel
   export const UserCircle: FC<IconProps>;
   export const BellRing: FC<IconProps>;
   export const Trash: FC<IconProps>;
 
-  // ✅ Adicionados agora para Challenges.tsx
+  // ✅ Ícones usados no Challenges.tsx
   export const CheckCircle: FC<IconProps>;
   export const Leaf: FC<IconProps>;
+
+  // ✅ Adicionados para Auth.tsx (campo de senha)
+  export const Eye: FC<IconProps>;
+  export const EyeOff: FC<IconProps>;
 }

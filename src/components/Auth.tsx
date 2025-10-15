@@ -1,12 +1,13 @@
 // src/components/Auth.tsx
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(true); // 👁️ senha visível por padrão
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -89,18 +90,31 @@ export default function Auth() {
               />
             </div>
 
-            <div>
+            {/* Campo de senha com olho 👁️ */}
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Senha
               </label>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all"
-                placeholder="••••••••"
+                className="w-full px-4 py-3.5 pr-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all"
+                placeholder="Digite sua senha"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-4 top-10 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
             </div>
 
             {error && (
