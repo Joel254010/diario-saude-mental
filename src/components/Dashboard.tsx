@@ -1,3 +1,4 @@
+// src/components/Dashboard.tsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getDailyMessage } from "../data/messages";
@@ -63,7 +64,7 @@ export default function Dashboard() {
   }, [user]);
 
   async function fetchTodayEntry() {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("registros")
       .select("*")
       .eq("id_usuario", user!.id)
@@ -104,7 +105,7 @@ export default function Dashboard() {
 
       if (!error) fetchTodayEntry();
     } else {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("registros")
         .insert({
           id_usuario: user!.id,
@@ -167,7 +168,7 @@ export default function Dashboard() {
         <header className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              {greeting}, {profile?.name || "amigo(a)"}{" "}
+              {greeting}, {profile?.nome || "amigo(a)"}{" "}
               <SunMedium className="inline w-8 h-8 text-yellow-500" />
             </h1>
             <p className="text-lg text-gray-700">Hoje é um novo começo.</p>

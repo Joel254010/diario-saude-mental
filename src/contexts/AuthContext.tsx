@@ -15,7 +15,7 @@ type SupaUser = {
 
 type SupaProfile = {
   id: string;
-  name: string;
+  nome: string; // <-- Corrigido aqui
   water_goal: number;
   notifications_enabled: boolean;
   dark_mode_enabled: boolean;
@@ -40,7 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<SupaProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Inicializa sessão do Supabase
   useEffect(() => {
     const fetchSession = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -55,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     fetchSession();
 
-    // Escuta mudanças de login/logout
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
@@ -73,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // 🔹 Carrega o perfil do usuário da tabela `usuarios`
   async function loadProfile(userId: string) {
     const { data, error } = await supabase
       .from("usuarios")
@@ -89,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(data);
   }
 
-  // 🔹 Cadastro (Auth + tabela usuarios)
   async function signUp(email: string, password: string, name: string) {
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
@@ -108,7 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.user) {
       setUser({ id: data.user.id, email: data.user.email! });
 
-      // Cria registro na tabela usuarios
       const { error: insertError } = await supabase.from("usuarios").insert([
         {
           id: data.user.id,
@@ -124,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }
 
-  // 🔹 Login
   async function signIn(email: string, password: string) {
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -141,17 +135,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({ id: data.user.id, email: data.user.email! });
       await loadProfile(data.user.id);
     }
+
     setLoading(false);
   }
 
-  // 🔹 Logout
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   }
 
-  // 🔹 Atualizar perfil
   async function updateProfile(updates: Partial<SupaProfile>) {
     if (!user) return;
 
