@@ -1,11 +1,12 @@
 // src/App.tsx
 import React, { useLayoutEffect, useEffect } from "react";
+import { BrowserRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Auth from "./components/Auth";
 import Dashboard from "./components/Dashboard";
 
 /**
- * Tema global escuro/claro sincronizado com localStorage e sistema
+ * 🌙 Tema global escuro/claro sincronizado com localStorage e sistema
  */
 function useGlobalTheme() {
   useLayoutEffect(() => {
@@ -55,7 +56,6 @@ function useGlobalTheme() {
 
 function AppContent() {
   useGlobalTheme();
-
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -76,8 +76,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
