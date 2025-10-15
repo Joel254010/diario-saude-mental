@@ -1,8 +1,9 @@
+// src/main.tsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
-import { AuthProvider } from "./contexts/AuthContext"; // ✅ importa o Provider
 
 const rootElement = document.getElementById("root");
 
@@ -12,8 +13,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <AuthProvider> {/* ✅ Agora envolve tudo com o contexto */}
+    <BrowserRouter>
       <App />
-    </AuthProvider>
+    </BrowserRouter>
   </StrictMode>
 );
