@@ -1,3 +1,4 @@
+// src/components/SettingsPanel.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -7,6 +8,7 @@ import {
   Moon,
   Trash,
   Save,
+  LogOut,
 } from "lucide-react";
 
 type Props = {
@@ -29,6 +31,9 @@ export default function SettingsPanel({ onBack }: Props) {
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  /* =====================================================
+   🌓 Modo escuro – sincroniza com localStorage
+  ====================================================== */
   useEffect(() => {
     const savedDark = localStorage.getItem("darkModeEnabled") === "true";
     setDarkModeEnabled(savedDark);
@@ -46,6 +51,9 @@ export default function SettingsPanel({ onBack }: Props) {
     }
   }, [darkModeEnabled]);
 
+  /* =====================================================
+   💾 Salvar alterações de perfil
+  ====================================================== */
   async function handleSave() {
     if (!user) return;
     setLoading(true);
@@ -53,7 +61,7 @@ export default function SettingsPanel({ onBack }: Props) {
 
     try {
       await updateProfile({
-        nome, // ✅ Corrigido aqui
+        nome,
         water_goal: waterGoal,
         notifications_enabled: notificationsEnabled,
         dark_mode_enabled: darkModeEnabled,
@@ -67,13 +75,26 @@ export default function SettingsPanel({ onBack }: Props) {
     }
   }
 
+  /* =====================================================
+   🗑️ Exclusão de conta (usa signOut)
+  ====================================================== */
   async function handleDeleteAccount() {
     if (!user) return;
+    try {
+      await signOut(); // o contexto já redireciona
+    } catch (err) {
+      console.error("Erro ao excluir conta:", err);
+    }
+  }
 
+  /* =====================================================
+   🚪 Logout manual
+  ====================================================== */
+  async function handleLogout() {
     try {
       await signOut();
     } catch (err) {
-      console.error("Erro ao excluir conta:", err);
+      console.error("Erro ao sair:", err);
     }
   }
 
@@ -199,6 +220,15 @@ export default function SettingsPanel({ onBack }: Props) {
             {loading ? "Salvando..." : "Salvar Alterações"}
           </button>
 
+          {/* 🔹 Botão de Logout */}
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-300 font-medium hover:text-blue-800 dark:hover:text-white py-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            Sair da Conta
+          </button>
+
           {/* Exclusão */}
           <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
             {!showDeleteConfirm ? (
@@ -239,7 +269,7 @@ export default function SettingsPanel({ onBack }: Props) {
             Mais um projeto desenvolvido por{" "}
             <span className="font-semibold">My GlobyX</span>
           </p>
-          <p className="mt-1">Inspirando Transformações Reais</p>
+          <p className="mt-1">Inspirando Transformações Reais 🌿</p>
         </div>
       </div>
     </div>
