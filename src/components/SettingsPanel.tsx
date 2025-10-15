@@ -16,10 +16,9 @@ type Props = {
 export default function SettingsPanel({ onBack }: Props) {
   const { user, profile, updateProfile, signOut } = useAuth();
 
-  const [name, setName] = useState(profile?.name || "");
-  const [waterGoal, setWaterGoal] = useState<number>(
-    profile?.water_goal || 8
-  );
+  // ⛳ Corrigido: de name para nome
+  const [nome, setNome] = useState(profile?.nome || "");
+  const [waterGoal, setWaterGoal] = useState<number>(profile?.water_goal || 8);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(
     profile?.notifications_enabled ?? true
   );
@@ -30,7 +29,6 @@ export default function SettingsPanel({ onBack }: Props) {
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Carrega tema escuro salvo
   useEffect(() => {
     const savedDark = localStorage.getItem("darkModeEnabled") === "true";
     setDarkModeEnabled(savedDark);
@@ -38,7 +36,6 @@ export default function SettingsPanel({ onBack }: Props) {
     else document.documentElement.classList.remove("dark");
   }, []);
 
-  // Aplica tema ao mudar
   useEffect(() => {
     if (darkModeEnabled) {
       document.documentElement.classList.add("dark");
@@ -56,7 +53,7 @@ export default function SettingsPanel({ onBack }: Props) {
 
     try {
       await updateProfile({
-        name,
+        nome, // ✅ Corrigido aqui
         water_goal: waterGoal,
         notifications_enabled: notificationsEnabled,
         dark_mode_enabled: darkModeEnabled,
@@ -74,10 +71,6 @@ export default function SettingsPanel({ onBack }: Props) {
     if (!user) return;
 
     try {
-      // ⚠️ Aqui apenas fazemos logout. Para excluir completamente:
-      // - Use a API Admin do Supabase (auth.admin.deleteUser)
-      // - Ou adicione uma flag deleted no banco e oculte o usuário
-
       await signOut();
     } catch (err) {
       console.error("Erro ao excluir conta:", err);
@@ -108,8 +101,8 @@ export default function SettingsPanel({ onBack }: Props) {
             </label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all"
             />
           </div>
