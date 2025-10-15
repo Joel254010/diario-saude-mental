@@ -15,7 +15,8 @@ type SupaUser = {
 
 type SupaProfile = {
   id: string;
-  nome: string; // <-- Corrigido aqui
+  nome: string;
+  email: string;
   water_goal: number;
   notifications_enabled: boolean;
   dark_mode_enabled: boolean;
@@ -91,9 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { nome: name },
-      },
     });
 
     if (error) {
@@ -109,6 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: data.user.id,
           nome: name,
           email: data.user.email,
+          water_goal: 8,
+          notifications_enabled: true,
+          dark_mode_enabled: false,
+          created_at: new Date().toISOString(),
         },
       ]);
 
